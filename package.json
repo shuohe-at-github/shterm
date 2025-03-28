@@ -1,0 +1,19 @@
+{
+  "name": "web-test",
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {
+    "start": "vite --host --port=8000"
+  },
+  "devDependencies": {
+    "@types/chai": "^5.2.1",
+    "@types/mocha": "^10.0.10",
+    "chai": "^5.2.0",
+    "typescript": "^5.8.2",
+    "vite": "^5.2.12",
+    "vite-plugin-full-reload": "^1.1.0"
+  },
+  "dependencies": {
+    "mocha": "^11.1.0"
+  }
+}

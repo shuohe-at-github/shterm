@@ -1,0 +1,19 @@
+body {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    height: 100vh;
+      
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  #shterm {
+    flex: 1;
+  }
+  
+  #cmdbar {
+    margin-top: 1em;
+    height: 2em;
+  }
+  
