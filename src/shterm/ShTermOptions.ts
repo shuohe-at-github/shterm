@@ -25,6 +25,10 @@ export class ShTermOptions {
         return ShTermOptions.global
     }
 
+    public create(options: Partial<ShTermOptions>): ShTermOptions {
+        return new ShTermOptions(options)
+    }
+
     public readonly enFontName: string
     public readonly enFontSize: number
     public readonly cnFontName: string
@@ -51,7 +55,10 @@ export class ShTermOptions {
         this.backColor = options.backColor || 'black'
 
         this.defaultEnFont = new shlib.Font(this.enFontName, this.enFontSize)
+        shlib.assert(this.defaultEnFont.monoCharWidth > 0)
+
         this.defaultCnFont = new shlib.Font(this.cnFontName, this.cnFontSize)
+        shlib.assert(this.defaultCnFont.hasGlyph('中'))
     }
 
     /**

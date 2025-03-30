@@ -18,7 +18,7 @@ describe('shlib.Font', () => {
             expect(font.monoCharWidth).greaterThan(0)
         })
 
-        it('非等宽字体', () => {
+        it('非等宽字体，应该等于零', () => {
             const font = new shlib.Font('Arial', 16)
             expect(font.monoCharWidth).to.eq(0)
         })

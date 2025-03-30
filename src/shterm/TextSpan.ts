@@ -77,7 +77,7 @@ export class TextSpan {
      * @param options 全局默认选项
      * @returns 生成的文本段对象
      */
-    public static create(text: string, style: Partial<TextStyle>, options?: ShTermOptions) {
+    public static create(text: string, style: Partial<TextStyle>, options?: ShTermOptions): TextSpan {
         return new TextSpan(text, style, options)
     }
 
@@ -110,13 +110,10 @@ export class TextSpan {
         }
         this.charWidth = this.style.font.charWidth(text[0], this.style.bold)
 
-        // 检查文本段中字符是否出现了中英文混排的情况，并且确保每个字符的显示宽度一致
+        // 检查文本段中每个字符的显示宽度是否一致
         for (let i = 1; i < text.length; i++) {
-            const c = text[i]
-            const f = options.chooseFontForChar(c)
-            const w = f.charWidth(c, this.style.bold)
-            shlib.assert(f.eq(this.style.font), '错误：文本段中混合了中英文。')
-            shlib.assert(w !== this.charWidth, '错误：文本段中字符显示宽度不同。')
+            const w = this.style.font.charWidth(text[i], this.style.bold)
+            shlib.assert(w === this.charWidth, '错误：文本段中字符显示宽度不同。')
         }
     }
 }

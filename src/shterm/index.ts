@@ -1,12 +1,14 @@
 export * from './Row'
+export * from './ShTermOptions'
 export * from './SpanElement'
+export * from './TextSpan'
 
 import './shterm.css'
 
 import * as shlib from '../shlib'
 
 import { ShTermOptions } from './ShTermOptions'
-import { TextStyle, TextSpan } from './TextSpan'
+import { TextStyle } from './TextSpan'
 import { Row } from './Row'
 
 export class ShTerm {
@@ -121,7 +123,7 @@ export class ShTerm {
         this._rowHeight = Math.ceil(Math.max(this._options.defaultEnFont.size, this._options.defaultCnFont.size) * this._options.rowHeightRatio)
         this._maxRows = Math.floor(this.$screen.clientHeight / this._rowHeight)
 
-        this._columnWidth = Math.ceil(Math.max(this._options.defaultCnFont.monoCharWidth, this._options.defaultCnFont.size / 2))
+        this._columnWidth = Math.ceil(Math.max(this._options.defaultEnFont.monoCharWidth, this._options.defaultCnFont.size / 2))
         this._maxColumns = Math.floor(this.$screen.clientWidth / this._columnWidth)
 
         const paddingTop = (this.$screen.clientHeight - this._rowHeight * this._maxRows) / 2
