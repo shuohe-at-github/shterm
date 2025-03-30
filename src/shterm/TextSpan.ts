@@ -20,6 +20,18 @@ export interface TextStyle {
 export class TextSpan {
 
     /**
+     * 创建新的文本段对象。
+     * 
+     * @param text 文本段内容
+     * @param style 文本显示样式
+     * @param options 全局默认选项
+     * @returns 生成的文本段对象
+     */
+    public static create(text: string, style: Partial<TextStyle>, options?: ShTermOptions): TextSpan {
+        return new TextSpan(text, style, options)
+    }
+
+    /**
      * 按字符显示宽度分割文本。让分割出来的每个文本段中的字符具有相同的显示宽度。字符显示宽度的测量依赖于当前中英文字体的设置。
      * 
      * @param text 要分割的文本
@@ -68,19 +80,6 @@ export class TextSpan {
 
         return result
     }
-
-    /**
-     * 创建新的文本段对象。
-     * 
-     * @param text 文本段内容
-     * @param style 文本显示样式
-     * @param options 全局默认选项
-     * @returns 生成的文本段对象
-     */
-    public static create(text: string, style: Partial<TextStyle>, options?: ShTermOptions): TextSpan {
-        return new TextSpan(text, style, options)
-    }
-
 
     public text: string               // 文本内容
     public style: TextStyle           // 文本绘制样式

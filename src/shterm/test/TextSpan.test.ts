@@ -131,4 +131,32 @@ describe('shterm.TextSpan', () => {
             }).to.throw('错误：文本段中字符显示宽度不同。')
         })
     })
+
+    describe('::splitText(text: string, style: Partial<TextStyle>, options?: ShTermOptions): TextSpan[]', () => {
+        it('空文本段', () => {
+            expect(TextSpan.splitText('', {})).to.deep.equal([])
+        })
+
+        it('单一英文文本段', () => {
+            expect(TextSpan.splitText('Hello', {})).to.deep.equal([
+                TextSpan.create('Hello', {}),
+            ])
+        })
+
+        it('单一中文文本段', () => {
+            expect(TextSpan.splitText('你好', {})).to.deep.equal([
+                TextSpan.create('你好', {}),
+            ])
+        })
+
+        it('中英文混杂', () => {
+            expect(TextSpan.splitText('hello::你好, 世界!', {})).to.deep.equal([
+                TextSpan.create('hello::', {}),
+                TextSpan.create('你好', {}),
+                TextSpan.create(', ', {}),
+                TextSpan.create('世界', {}),
+                TextSpan.create('!', {}),
+            ])
+        })
+    })
 })
