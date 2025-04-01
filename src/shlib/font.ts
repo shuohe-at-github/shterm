@@ -5,6 +5,10 @@ const ChineseFonts = [
     '"Microsoft YaHei"', 'SimSun', 'SimHei', 'FangSong', 'KaiTi', 'NSimSun', 'FangSong_GB2312', 'KaiTi_GB2312',
 ]
 
+export function registerChineseFonts(...fonts: string[]) {
+    ChineseFonts.push(...fonts)
+}
+
 export type CharType = 'wide' | 'narrow' | 'ctrl' | 'unknown'
 /**
  * 与字体相关的工具类。
@@ -15,16 +19,16 @@ export class Font {
      * 缓存用于测量文本的离屏 Canvas 元素和上下文。
      */
     private static $canvas = document.createElement('canvas')
-    private static $ctx = Font.$canvas.getContext('2d')!
+    private static $ctx = Font.$canvas.getContext('2d', { willReadFrequently: true, })!
 
     /**
      * 判断一个字符是否是 Unicode 标准中的常用宽字符。
      * 
-     * @param char 要判断的字符
+     * @param c 要判断的字符
      * @returns 如果是常用宽字符，返回 'wide'；如果是常用窄字符，返回 'narrow'；如果是控制字符，则返回 'ctrl'；否则返回 'unknown'。
      */
-    public static charType(char: string): CharType {
-        const code = char.charCodeAt(0)!
+    public static charType(c: string): CharType {
+        const code = c.charCodeAt(0)!
 
         // 中日韩汉字为主
         if (code >= 0x3250 && code <= 0xA4C6) return 'wide'
@@ -67,7 +71,7 @@ export class Font {
     private _sizeInPixel: number
     private _isChineseFont: boolean
     private _monoCharWidth: number
-    private _charWidthCache: Map<number, number>
+    private _charWidthCache: Map<string, number>
     private _hasGlyphCache: Map<number, boolean>
 
     constructor(name: string, sizeInPixel: number) {
@@ -79,15 +83,15 @@ export class Font {
         this._isChineseFont = ChineseFonts.includes(this._name)
 
         Font.$ctx.font = `${this._sizeInPixel}px ${this._name}`
-        const w1 = this._measureText('i').width
-        const w2 = this._measureText('W').width
+        const w1 = this.measureText('i').width
+        const w2 = this.measureText('W').width
 
         this._monoCharWidth = (w1 === w2) ? w1 : 0
 
         this._charWidthCache = new Map()
         if (! this._monoCharWidth) {
-            this._charWidthCache.set('i'.codePointAt(0)!, w1)
-            this._charWidthCache.set('W'.codePointAt(0)!, w2)
+            this._charWidthCache.set('i', w1)
+            this._charWidthCache.set('W', w2)
         }
 
         this._hasGlyphCache = new Map()
@@ -118,20 +122,20 @@ export class Font {
     public charWidth(c: string, bold?: boolean): number {
         assert(c.length === 1)
 
-        const chType = Font.charType(c)
-        if (chType === 'narrow' && this._monoCharWidth) return this._monoCharWidth
-        if (chType === 'wide') return this._sizeInPixel
-        if (chType === 'ctrl') return 0
+        const ct = Font.charType(c)
+        if (ct === 'narrow' && this._monoCharWidth) return this._monoCharWidth
+        if (ct === 'wide') return this._sizeInPixel
+        if (ct === 'ctrl') return 0
         
         // 如果是未知字符，则先尝试从缓存中获取结果
-        const code = c.codePointAt(0)!
-        const cached = this._charWidthCache.get(code)
+        const k = c + (bold ? 'b' : '')
+        const cached = this._charWidthCache.get(k)
         if (cached !== undefined)
             return cached
 
         // 否则，计算并缓存结果
-        const w = this._measureText(c, bold).width
-        this._charWidthCache.set(code, w)
+        const w = this.measureText(c, bold).width
+        this._charWidthCache.set(k, w)
 
         return w
     }
@@ -215,7 +219,7 @@ export class Font {
      * @param bold 是否加粗，默认为 false
      * @returns 文本字符串的绘制尺寸信息。
      */
-    public _measureText(text: string, bold?: boolean): TextMetrics {
+    public measureText(text: string, bold?: boolean): TextMetrics {
         Font.$ctx.font = `${bold ? 'bold ' : ''}${this._sizeInPixel}px ${this._name}`
         return Font.$ctx.measureText(text)
     }    

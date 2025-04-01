@@ -70,18 +70,141 @@ describe('shterm.SpanElement', () => {
         })
     })
 
+    describe('.mergeTextSpan(span: TextSpan, where: \'begin\' | \'end\'): boolean', () => {
+        it('英文，正常合并在头部', () => {
+            const $span = SpanElement.create($term!, new TextSpan('abc', {}, $term!.options))
+            expect($span.mergeTextSpan(new TextSpan('def', {}, $term!.options), 'begin')).is.true
+            expect($span.textContent!).eq('defabc')
+        })
+        it('英文，正常合并在尾部', () => {
+            const $span = SpanElement.create($term!, new TextSpan('abc', {}, $term!.options))
+            expect($span.mergeTextSpan(new TextSpan('def', {}, $term!.options), 'end')).is.true
+            expect($span.textContent!).eq('abcdef')
+        })
+        it('中文，正常合并在头部', () => {
+            const $span = SpanElement.create($term!, new TextSpan('中国', {}, $term!.options))
+            expect($span.mergeTextSpan(new TextSpan('人民', {}, $term!.options), 'begin')).is.true
+            expect($span.textContent!).eq('人民中国')
+        })
+        it('中文，正常合并在尾部', () => {
+            const $span = SpanElement.create($term!, new TextSpan('中国', {}, $term!.options))
+            expect($span.mergeTextSpan(new TextSpan('人民', {}, $term!.options), 'end')).is.true
+            expect($span.textContent!).eq('中国人民')
+        })
+        it('中英文，不能合并', () => {
+            let $span = SpanElement.create($term!, new TextSpan('中国', {}, $term!.options))
+            expect($span.mergeTextSpan(new TextSpan('abc', {}, $term!.options), 'end')).is.false
+            $span = SpanElement.create($term!, new TextSpan('abc', {}, $term!.options))
+            expect($span.mergeTextSpan(new TextSpan('中国', {}, $term!.options), 'end')).is.false
+        })
+        it('显示风格不同，不能合并', () => {
+            const $span = SpanElement.create($term!, new TextSpan('中国', {}, $term!.options))
+            expect($span.mergeTextSpan(new TextSpan('人民', { foreColor: 'red', }, $term!.options), 'end')).is.false
+            expect($span.mergeTextSpan(new TextSpan('人民', { font: new shlib.Font('楷体', 16), }, $term!.options), 'end')).is.false
+        })
+    })
+
     describe('.deleteColumns()', () => {
-        it('参数异常', () => {
-            const $span = SpanElement.create($term!, TextSpan.create('中国', {}, $term!.options))
+        it('参数不合法', () => {
+            const $span = SpanElement.create($term!, TextSpan.create('abcdefg', {}, $term!.options))
 
             expect(() => {
-                $span.deleteColumns(-1, 0)
+                $span.deleteText(-1, 0)
             }).to.throw()
 
             expect(() => {
-                $span.deleteColumns(0, -1)
+                $span.deleteText(0, -1)
             }).to.throw()
+        })
 
+        it('英文文本段，删除头部', () => {
+            const $span = SpanElement.create($term!, TextSpan.create('abcdefg', {}, $term!.options))
+
+            let result = $span.deleteText(0, 1)
+            expect(result).lengthOf(1)
+            expect(result[0].textContent).eq('bcdefg')
+            expect(result[0].style).deep.eq($span.style)
+        })
+
+        it('英文文本段，删除中间', () => {
+            const $span = SpanElement.create($term!, TextSpan.create('abcdefg', {}, $term!.options))
+
+            let result = $span.deleteText(1, 3)
+            expect(result).lengthOf(2)
+            expect(result[0].textContent).eq('a')
+            expect(result[1].textContent).eq('defg')
+        })
+
+        it('英文文本段，删除尾部', () => {
+            const $span = SpanElement.create($term!, TextSpan.create('abcdefg', {}, $term!.options))
+
+            let result = $span.deleteText(4)
+            expect(result).lengthOf(1)
+            expect(result[0].textContent).eq('abcd')
+        })
+
+        it('中文文本段，删除头部', () => {
+            const $span = SpanElement.create($term!, TextSpan.create('中华人民共和国', {}, $term!.options))
+
+            let result = $span.deleteText(0, 2)
+            expect(result).lengthOf(1)
+            expect(result[0].textContent).eq('华人民共和国')
+            expect(result[0].style).deep.eq($span.style)
+        })
+
+        it('中文文本段，删除中间', () => {
+            const $span = SpanElement.create($term!, TextSpan.create('中华人民共和国', {}, $term!.options))
+
+            let result = $span.deleteText(2, 4)
+            expect(result).lengthOf(2)
+            expect(result[0].textContent).eq('中')
+            expect(result[1].textContent).eq('人民共和国')
+        })
+
+        it('中文文本段，删除尾部', () => {
+            const $span = SpanElement.create($term!, TextSpan.create('中华人民共和国', {}, $term!.options))
+
+            let result = $span.deleteText(4)
+            expect(result).lengthOf(1)
+            expect(result[0].textContent).eq('中华')
+        })
+
+        it('中文文本段，第一个汉字残缺', () => {
+            const $span = SpanElement.create($term!, TextSpan.create('中华人民共和国', {}, $term!.options))
+
+            let result = $span.deleteText(1, 4)
+            expect(result).lengthOf(2)
+            expect(result[0].textContent).eq(' ')
+            expect(result[1].textContent).eq('人民共和国')
+        })
+
+        it('中文文本段，中间开始汉字残缺', () => {
+            const $span = SpanElement.create($term!, TextSpan.create('中华人民共和国', {}, $term!.options))
+
+            let result = $span.deleteText(3, 4)
+            expect(result).lengthOf(3)
+            expect(result[0].textContent).eq('中')
+            expect(result[1].textContent).eq(' ')
+            expect(result[2].textContent).eq('人民共和国')
+        })
+
+        it('中文文本段，中间两头汉字残缺', () => {
+            const $span = SpanElement.create($term!, TextSpan.create('中华人民共和国', {}, $term!.options))
+
+            let result = $span.deleteText(3, 7)
+            expect(result).lengthOf(4)
+            expect(result[0].textContent).eq('中')
+            expect(result[1].textContent).eq(' ')
+            expect(result[2].textContent).eq(' ')
+            expect(result[3].textContent).eq('共和国')
+        })
+
+        it('中文文本段，尾部汉字残缺', () => {
+            const $span = SpanElement.create($term!, TextSpan.create('中华人民共和国', {}, $term!.options))
+            let result = $span.deleteText(12, 13)
+            expect(result).lengthOf(2)
+            expect(result[0].textContent).eq('中华人民共和')
+            expect(result[1].textContent).eq(' ')
         })
     })
 })

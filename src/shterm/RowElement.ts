@@ -1,61 +1,55 @@
 import * as shlib from '../shlib'
 
-import { TextStyle, TextSpan, ShTerm } from './index'
-
-export class Row extends HTMLElement {
+import { TextStyle, TextSpan, SpanElement, ShTerm } from './index'
+export class RowElement extends HTMLElement {
 
     public static create($term: ShTerm) {
-        const $row = shlib.createElement('shterm-row') as Row
-        $row.$term = $term
+        const $row = shlib.createElement('shterm-row') as RowElement
+        $row._$term = $term
 
         return $row
     }
 
-    private $term: ShTerm | null = null
+    private _$term: ShTerm | null = null
 
     constructor() {
         super()
     }
 
     public countColumns(): number {
-        let cols = 0
-        let $span = this.firstElementChild as HTMLElement
-        while ($span) {
-            cols += this.countColumnsInSpan($span)
-            $span = $span.nextElementSibling as HTMLElement
-        }
+        let ncols = 0
+        for (let i = 0; i < this.children.length; i++)
+            ncols += (this.children[i] as SpanElement).countColumns()
 
-        return cols
-    }
-
-    private countColumnsInSpan($span: HTMLElement | null): number {
-        return $span ? ($span.textContent!.length * ($span.hasAttribute('w')? 2 : 1)) : 0
+        return ncols
     }
 
     /**
-     * 根据列号定位到文本段和文本段中的字符位置。
+     * 根据列号定位到文本段，以及文本段中的字符位置。
      * 
-     * @param col 列号，从 0 开始
+     * @param col 列号，从 0 开始，不得大于等于本行的总列数。
      * @returns 文本段和文本段中的字符位置。
      */
-    public _columnToCharIndex(col: number): { $span: HTMLElement | null, charIndex: number } {
-        let $span = this.firstElementChild as HTMLElement
-        let cols = this.countColumnsInSpan($span)
-        while ($span && cols <= col) {
-            $span = $span.nextElementSibling as HTMLElement
-            cols += this.countColumnsInSpan($span)
+    public _columnToCharIndex(col: number): { $span: SpanElement | null, charIndex: number } {
+        shlib.assert(0 <= col && col < this.countColumns())
+
+        let colInSpan = col
+        let $span: SpanElement | null = this.firstElementChild as SpanElement
+        let spanCols = $span?.countColumns() || 0
+        while ($span?.nextElementSibling && colInSpan >= spanCols) {
+            colInSpan -= spanCols
+            $span = $span!.nextElementSibling as SpanElement
         }
 
-        if (! $span)
+        if ($span)
             return {
-                $span: null,
-                charIndex: col - cols,
+                $span,
+                charIndex: colInSpan / ($span.hasAttribute('w')? 2 : 1),
             }
-
-        const nw = $span.hasAttribute('w')? 2 : 1
+        
         return {
-            $span,
-            charIndex: $span.textContent!.length - (cols - col) / nw,
+            $span: null,
+            charIndex: colInSpan,
         }
     }
 
@@ -73,24 +67,6 @@ export class Row extends HTMLElement {
         $span.textContent = $span.textContent!.substring(0, charIndex)
         this.insertBefore($span2, $span.nextSibling)
         $span2.textContent = $span.textContent!.substring(charIndex)
-    }
-
-    public deleteColumns(startCol: number, endCol?: number) {
-        endCol = endCol ?? this.countColumns()
-        shlib.assert(startCol >= 0 && startCol <= endCol)
-        if (startCol === endCol)
-            return
-
-        const { $span, charIndex } = this._columnToCharIndex(startCol)
-        shlib.assert($span) // startCol 一定落在某个文本段中
-
-        if (charIndex > Math.floor(charIndex)) {
-            // startCol 落在一个宽字符的中间，需要将这个字符分解为两个窄的空白字符
-            const $twospaces = this._createSpan({
-                text: ' '.repeat(2),
-                style: { font: this.$term!.defaultEnFont },
-            })
-        }
     }
 
     public _mergeSpan($prev: HTMLElement, $next: HTMLElement): boolean {
@@ -127,7 +103,7 @@ export class Row extends HTMLElement {
 
     public _appendSpan(...spans: TextSpan[]) {
         for (const sp of spans) {
-            const $span = this._createSpan(sp)
+            const $span = SpanElement.create(this._$term!, sp)
             const $last = this.lastElementChild as HTMLElement
             if ((! $last) || (! this._mergeSpan($last, $span)))
                 this.append($span)
@@ -135,4 +111,4 @@ export class Row extends HTMLElement {
     }
 }
 
-customElements.define('shterm-row', Row)
+customElements.define('shterm-row', RowElement)

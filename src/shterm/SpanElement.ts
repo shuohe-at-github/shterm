@@ -1,6 +1,6 @@
 import * as shlib from '../shlib'
 
-import { TextSpan } from './TextSpan'
+import { TextStyle, TextSpan } from './TextSpan'
 import { ShTerm } from './index'
 
 
@@ -15,6 +15,7 @@ export class SpanElement extends HTMLElement {
     }
 
     private _$term: ShTerm | null = null
+    private _textStyle: TextStyle | null = null
 
     constructor() {
         super()
@@ -25,7 +26,7 @@ export class SpanElement extends HTMLElement {
     }
 
     public countColumns(): number {
-        return this.textContent!.length * (this.hasAttribute('w')? 2 : 1)
+        return this.textContent!.length * (this.hasAttribute('w') ? 2 : 1)
     }
 
     public columnToCharIndex(col: number): number {
@@ -34,7 +35,6 @@ export class SpanElement extends HTMLElement {
 
     public fromTextSpan(span: TextSpan) {
         shlib.assert(this._$term).hasValue()
-        shlib.assert(span.text.length !== 0)
         shlib.assert(shlib.Font.charType(span.text[0]) !== 'ctrl')
 
         const nc = this._$term!.charWidthToCols(span.charWidth!)
@@ -47,6 +47,7 @@ export class SpanElement extends HTMLElement {
             this.removeAttribute('w')
 
         const st = span.style
+        this._textStyle = st
         this.updateStyle({
             fontFamily: st.font.name === this._$term!.options.defaultEnFont.name ? '' : st.font.name,
             fontSize: st.font.size === this._$term!.options.defaultEnFont.size ? '' : `${st.font.size}px`,
@@ -63,35 +64,18 @@ export class SpanElement extends HTMLElement {
 
     public toTextSpan(): TextSpan {
         shlib.assert(this._$term).hasValue()
+        shlib.assert(this._textStyle).hasValue()
 
-        const ff = this.style.fontFamily
-        const fs = parseInt(this.style.fontSize)
-        let font: shlib.Font
-
-        if (ff === '') {
-            shlib.assert(isNaN(fs))
-            font = this._$term!.options.defaultEnFont
-        } else {
-            shlib.assert(fs > 0)
-            const f = new shlib.Font(ff, fs)
-            if (f.eq(this._$term!.options.defaultEnFont))
-                font = this._$term!.options.defaultEnFont
-            else if (f.eq(this._$term!.options.defaultCnFont))
-                font = this._$term!.options.defaultCnFont
-            else
-                font = f
-        }
-
-        return TextSpan.create(this.textContent!, {
-            font: font,
-            foreColor: this.style.color || this._$term!.options.foreColor,
-            backColor: this.style.backgroundColor || this._$term!.options.backColor,
-            bold: this.style.fontWeight === 'bold',
-            italic: this.style.fontStyle === 'italic',
-            underline: this.style.textDecoration === 'underline',
-        }, this._$term!.options)
+        return TextSpan.create(this.textContent!, this._textStyle!, this._$term!.options)
     }
 
+    /**
+     * 尝试将一个文本段合并入本元素的文本内容中。
+     * 
+     * @param span 要合并的文本段
+     * @param where 合并位置。'begin' 表示将 span.text 加在头部，'end' 表示将 span.text 加在尾部
+     * @returns 如果因为字符显示宽度不同或显示风格不同无法合并，返回 false，否则进行合并并返回 true
+     */
     public mergeTextSpan(span: TextSpan, where: 'begin' | 'end'): boolean {
         shlib.assert(this._$term).hasValue()
         const thisSpan = this.toTextSpan()
@@ -117,16 +101,20 @@ export class SpanElement extends HTMLElement {
         return true
     }
 
-    public deleteColumns(startCol: number, endCol?: number): SpanElement[] {
+    /**
+     * 将本文本段当中的指定列数的内容删除，返回因为删除而分裂出的文本段数组。
+     * 
+     * @param startCol 要删除内容的在本文本段内的起始列号。必须满足 0 <= startCol < endCol。
+     * @param endCol 要删除内容在本文本段内的结束列号（不包括）。如果未指定，或者值大于文本段的总列数，则视为删除到文本段末尾。
+     * @returns 因为删除而分裂出的文本段数组。
+     */
+    public deleteText(startCol: number, endCol?: number): SpanElement[] {
         shlib.assert(this._$term).hasValue()
 
         const ncols = this.countColumns()
         if (endCol === undefined || endCol > ncols)
             endCol = ncols
-        shlib.assert(0 <= startCol && startCol <= endCol && endCol <= ncols)
-
-        if (startCol === endCol)
-            return []
+        shlib.assert(0 <= startCol && startCol < endCol)
 
         const startIndex = this.columnToCharIndex(startCol)
         const endIndex = this.columnToCharIndex(endCol)
@@ -135,31 +123,31 @@ export class SpanElement extends HTMLElement {
         const $spans = [] as SpanElement[]
 
         if (startIndex >= 1) {
-            this.textContent = this.textContent!.substring(0, Math.floor(startIndex))
+            this.textContent = ts.text.substring(0, Math.floor(startIndex))
             $spans.push(this)
         }
         if (startIndex > Math.floor(startIndex))
-            $spans.push(SpanElement.create(this.$term!, new TextSpan(
+            $spans.push(SpanElement.create(this._$term!, new TextSpan(
                 ' ',
-                Object.assign({}, ts.style, { font: this.$term!.options.defaultEnFont, }),
-                this.$term!.options,
+                Object.assign({}, ts.style, { font: this._$term!.options.defaultEnFont, }),
+                this._$term!.options,
             )))
         if (endIndex > Math.floor(endIndex))
-            $spans.push(SpanElement.create(this.$term!, new TextSpan(
+            $spans.push(SpanElement.create(this._$term!, new TextSpan(
                 ' ',
-                Object.assign({}, ts.style, { font: this.$term!.options.defaultEnFont, }),
-                this.$term!.options,
+                Object.assign({}, ts.style, { font: this._$term!.options.defaultEnFont, }),
+                this._$term!.options,
             )))
-        if (Math.ceil(endIndex) < this.textContent!.length) {
-            if (startIndex < 1) {
-                this.textContent = this.textContent!.substring(Math.ceil(endIndex))
-                $spans.push(this)
-            } else {
-                $spans.push(SpanElement.create(this.$term!, {
-                    text: this.textContent!.substring(Math.ceil(endIndex)),
+        if (Math.ceil(endIndex) < ts.text.length) {
+            if (startIndex >= 1) {
+                $spans.push(SpanElement.create(this._$term!, {
+                    text: ts.text.substring(Math.ceil(endIndex)),
                     style: ts.style,
                     charWidth: ts.charWidth,
                 }))
+            } else {
+                this.textContent = ts.text.substring(Math.ceil(endIndex))
+                $spans.push(this)
             }
         }
 
