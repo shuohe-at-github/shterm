@@ -1,13 +1,13 @@
 import * as shlib from '../shlib'
 
-import { TextStyle, TextSpan } from './TextSpan'
+import { ShTextStyle, ShTextSpan } from './ShTextSpan'
 import { ShTerm } from './index'
 
 
-export class SpanElement extends HTMLElement {
+export class ShSpanElement extends HTMLElement {
 
-    public static create($term: ShTerm, span: TextSpan): SpanElement {
-        const $span = shlib.createElement('shterm-span') as SpanElement
+    public static create($term: ShTerm, span: ShTextSpan): ShSpanElement {
+        const $span = shlib.createElement('shterm-span') as ShSpanElement
         $span._$term = $term
         $span.fromTextSpan(span)
 
@@ -15,7 +15,7 @@ export class SpanElement extends HTMLElement {
     }
 
     private _$term: ShTerm | null = null
-    private _textStyle: TextStyle | null = null
+    private _textStyle: ShTextStyle | null = null
 
     constructor() {
         super()
@@ -33,7 +33,7 @@ export class SpanElement extends HTMLElement {
         return col / (this.hasAttribute('w')? 2 : 1)
     }
 
-    public fromTextSpan(span: TextSpan) {
+    public fromTextSpan(span: ShTextSpan) {
         shlib.assert(this._$term).hasValue()
         shlib.assert(shlib.Font.charType(span.text[0]) !== 'ctrl')
 
@@ -62,11 +62,11 @@ export class SpanElement extends HTMLElement {
         })
     }
 
-    public toTextSpan(): TextSpan {
+    public toTextSpan(): ShTextSpan {
         shlib.assert(this._$term).hasValue()
         shlib.assert(this._textStyle).hasValue()
 
-        return TextSpan.create(this.textContent!, this._textStyle!, this._$term!.options)
+        return ShTextSpan.create(this.textContent!, this._textStyle!, this._$term!.options)
     }
 
     /**
@@ -76,7 +76,7 @@ export class SpanElement extends HTMLElement {
      * @param where 合并位置。'begin' 表示将 span.text 加在头部，'end' 表示将 span.text 加在尾部
      * @returns 如果因为字符显示宽度不同或显示风格不同无法合并，返回 false，否则进行合并并返回 true
      */
-    public mergeTextSpan(span: TextSpan, where: 'begin' | 'end'): boolean {
+    public mergeTextSpan(span: ShTextSpan, where: 'begin' | 'end'): boolean {
         shlib.assert(this._$term).hasValue()
         const thisSpan = this.toTextSpan()
 
@@ -108,7 +108,7 @@ export class SpanElement extends HTMLElement {
      * @param endCol 要删除内容在本文本段内的结束列号（不包括）。如果未指定，或者值大于文本段的总列数，则视为删除到文本段末尾。
      * @returns 因为删除而分裂出的文本段数组。
      */
-    public deleteText(startCol: number, endCol?: number): SpanElement[] {
+    public deleteText(startCol: number, endCol?: number): ShSpanElement[] {
         shlib.assert(this._$term).hasValue()
 
         const ncols = this.countColumns()
@@ -120,27 +120,27 @@ export class SpanElement extends HTMLElement {
         const endIndex = this.columnToCharIndex(endCol)
     
         const ts = this.toTextSpan()
-        const $spans = [] as SpanElement[]
+        const $spans = [] as ShSpanElement[]
 
         if (startIndex >= 1) {
             this.textContent = ts.text.substring(0, Math.floor(startIndex))
             $spans.push(this)
         }
         if (startIndex > Math.floor(startIndex))
-            $spans.push(SpanElement.create(this._$term!, new TextSpan(
+            $spans.push(ShSpanElement.create(this._$term!, new ShTextSpan(
                 ' ',
                 Object.assign({}, ts.style, { font: this._$term!.options.defaultEnFont, }),
                 this._$term!.options,
             )))
         if (endIndex > Math.floor(endIndex))
-            $spans.push(SpanElement.create(this._$term!, new TextSpan(
+            $spans.push(ShSpanElement.create(this._$term!, new ShTextSpan(
                 ' ',
                 Object.assign({}, ts.style, { font: this._$term!.options.defaultEnFont, }),
                 this._$term!.options,
             )))
         if (Math.ceil(endIndex) < ts.text.length) {
             if (startIndex >= 1) {
-                $spans.push(SpanElement.create(this._$term!, {
+                $spans.push(ShSpanElement.create(this._$term!, {
                     text: ts.text.substring(Math.ceil(endIndex)),
                     style: ts.style,
                     charWidth: ts.charWidth,
@@ -155,4 +155,4 @@ export class SpanElement extends HTMLElement {
     }
 }
 
-customElements.define('shterm-span', SpanElement)
+customElements.define('shterm-span', ShSpanElement)

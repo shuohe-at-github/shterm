@@ -1,15 +1,15 @@
-export * from './RowElement'
+export * from './ShRowElement'
 export * from './ShTermOptions'
-export * from './SpanElement'
-export * from './TextSpan'
+export * from './ShSpanElement'
+export * from './ShTextSpan'
 
 import './shterm.css'
 
 import * as shlib from '../shlib'
 
 import { ShTermOptions } from './ShTermOptions'
-import { TextStyle } from './TextSpan'
-import { RowElement } from './RowElement'
+import { ShTextStyle } from './ShTextSpan'
+import { ShRowElement } from './ShRowElement'
 
 export class ShTerm {
 
@@ -57,7 +57,7 @@ export class ShTerm {
         this.$container.append(this.$scrollbar)
 
         // 创建第一个行对象
-        this.$screen.append(RowElement.create(this))
+        this.$screen.append(ShRowElement.create(this))
 
         this._updateLayout()
         this._resizeObserver = new ResizeObserver(() => {
@@ -97,7 +97,7 @@ export class ShTerm {
         return (cw > this._columnWidth) ? 2 : 1
     }
 
-    public drawText(row: number, col: number, text: string, style: Partial<TextStyle> = {}) {
+    public drawText(row: number, col: number, text: string, style: Partial<ShTextStyle> = {}) {
         shlib.assert(row >= 0 && row < this._maxRows)
         shlib.assert(col >= 0 && col < this._maxColumns)
 
@@ -109,14 +109,14 @@ export class ShTerm {
      * @param row 屏幕上的行号，从 0 开始。
      * @returns 显示在屏幕上第 row 行的 Row 对象。
      */
-    public _getRowAtScreen(row: number): RowElement {
+    public _getRowAtScreen(row: number): ShRowElement {
         shlib.assert(row >= 0 && row < this._maxRows)
 
         const index = this._scrollRow + row
         while (index >= this.$screen.children.length)
-            this.$screen.append(RowElement.create(this))
+            this.$screen.append(ShRowElement.create(this))
 
-        return this.$screen.children[index] as RowElement
+        return this.$screen.children[index] as ShRowElement
     }
 
     public _updateLayout() {

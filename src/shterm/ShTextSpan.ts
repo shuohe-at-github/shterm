@@ -5,7 +5,7 @@ import { ShTermOptions } from './ShTermOptions'
 /**
  * 文本显示样式。
  */
-export interface TextStyle {
+export interface ShTextStyle {
     font: shlib.Font
     foreColor: string   // CSS 颜色字符串
     backColor: string   // CSS 颜色字符串
@@ -17,7 +17,7 @@ export interface TextStyle {
 /**
  * 文本段类。一个文本段中，所有字符的显示宽度都相同。
  */
-export class TextSpan {
+export class ShTextSpan {
 
     /**
      * 创建新的文本段对象。
@@ -27,8 +27,8 @@ export class TextSpan {
      * @param options 全局默认选项
      * @returns 生成的文本段对象
      */
-    public static create(text: string, style: Partial<TextStyle>, options?: ShTermOptions): TextSpan {
-        return new TextSpan(text, style, options)
+    public static create(text: string, style: Partial<ShTextStyle>, options?: ShTermOptions): ShTextSpan {
+        return new ShTextSpan(text, style, options)
     }
 
     /**
@@ -39,11 +39,11 @@ export class TextSpan {
      * @param options 全局默认选项
      * @returns 分割后的文本段数组
      */
-    public static splitText(text: string, style: Partial<TextStyle>, options?: ShTermOptions): TextSpan[] {
+    public static splitText(text: string, style: Partial<ShTextStyle>, options?: ShTermOptions): ShTextSpan[] {
         if (!options)
             options = ShTermOptions.getGlobal()
 
-        const result: TextSpan[] = []
+        const result: ShTextSpan[] = []
         let ci = -1
         let cw = -1
         let cf = options.defaultEnFont
@@ -56,7 +56,7 @@ export class TextSpan {
                 // 本字符开始是一个新的文本段
                 // 如果前一个文本段有积累，将其加入结果集
                 if (ci >= 0) {
-                    result.push(TextSpan.create(
+                    result.push(ShTextSpan.create(
                         text.substring(ci, i),
                         Object.assign({}, style, { font: cf }),
                         options,
@@ -71,7 +71,7 @@ export class TextSpan {
             // 继续累积当前文本段
         }
         if (ci >= 0) {
-            result.push(TextSpan.create(
+            result.push(ShTextSpan.create(
                 text.substring(ci),
                 Object.assign({}, style, { font: cf }),
                 options,
@@ -82,7 +82,7 @@ export class TextSpan {
     }
 
     public text: string               // 文本内容
-    public style: TextStyle           // 文本绘制样式
+    public style: ShTextStyle           // 文本绘制样式
     public charWidth: number          // 文本字符实际绘制宽度，单位为像素
 
     /**
@@ -92,7 +92,7 @@ export class TextSpan {
      * @param style 文本显示样式
      * @param options 全局默认选项
      */
-    constructor(text: string, style: Partial<TextStyle>, options?: ShTermOptions) {
+    constructor(text: string, style: Partial<ShTextStyle>, options?: ShTermOptions) {
         shlib.assert(text.length > 0)
 
         if (! options)

@@ -1,10 +1,12 @@
 import * as shlib from '../shlib'
 
-import { TextStyle, TextSpan, SpanElement, ShTerm } from './index'
-export class RowElement extends HTMLElement {
+import { ShTextStyle, ShTextSpan, ShSpanElement, ShTerm } from './index'
+
+
+export class ShRowElement extends HTMLElement {
 
     public static create($term: ShTerm) {
-        const $row = shlib.createElement('shterm-row') as RowElement
+        const $row = shlib.createElement('shterm-row') as ShRowElement
         $row._$term = $term
 
         return $row
@@ -19,7 +21,7 @@ export class RowElement extends HTMLElement {
     public countColumns(): number {
         let ncols = 0
         for (let i = 0; i < this.children.length; i++)
-            ncols += (this.children[i] as SpanElement).countColumns()
+            ncols += (this.children[i] as ShSpanElement).countColumns()
 
         return ncols
     }
@@ -30,15 +32,15 @@ export class RowElement extends HTMLElement {
      * @param col 列号，从 0 开始，不得大于等于本行的总列数。
      * @returns 文本段和文本段中的字符位置。
      */
-    public _columnToCharIndex(col: number): { $span: SpanElement | null, charIndex: number } {
+    public _columnToCharIndex(col: number): { $span: ShSpanElement | null, charIndex: number } {
         shlib.assert(0 <= col && col < this.countColumns())
 
         let colInSpan = col
-        let $span: SpanElement | null = this.firstElementChild as SpanElement
+        let $span: ShSpanElement | null = this.firstElementChild as ShSpanElement
         let spanCols = $span?.countColumns() || 0
         while ($span?.nextElementSibling && colInSpan >= spanCols) {
             colInSpan -= spanCols
-            $span = $span!.nextElementSibling as SpanElement
+            $span = $span!.nextElementSibling as ShSpanElement
         }
 
         if ($span)
@@ -101,9 +103,9 @@ export class RowElement extends HTMLElement {
         return true
     }
 
-    public _appendSpan(...spans: TextSpan[]) {
+    public _appendSpan(...spans: ShTextSpan[]) {
         for (const sp of spans) {
-            const $span = SpanElement.create(this._$term!, sp)
+            const $span = ShSpanElement.create(this._$term!, sp)
             const $last = this.lastElementChild as HTMLElement
             if ((! $last) || (! this._mergeSpan($last, $span)))
                 this.append($span)
@@ -111,4 +113,4 @@ export class RowElement extends HTMLElement {
     }
 }
 
-customElements.define('shterm-row', RowElement)
+customElements.define('shterm-row', ShRowElement)
