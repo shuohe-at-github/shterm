@@ -3,7 +3,7 @@ import { expect } from 'chai'
 import * as shlib from '../../shlib'
 import { ShTerm, ShSpanElement, ShTextSpan } from '..'
 
-describe('shterm.SpanElement', () => {
+describe('shterm.ShSpanElement', () => {
     let $term: ShTerm | null = null
 
     before(() => {

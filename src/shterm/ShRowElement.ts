@@ -1,6 +1,6 @@
 import * as shlib from '../shlib'
 
-import { ShTextStyle, ShTextSpan, ShSpanElement, ShTerm } from './index'
+import { ShTextStyle, compareTextStyle, ShTextSpan, ShSpanElement, ShTerm } from './index'
 
 
 export class ShRowElement extends HTMLElement {
@@ -30,26 +30,28 @@ export class ShRowElement extends HTMLElement {
      * 根据列号定位到文本段，以及文本段中的字符位置。
      * 
      * @param col 列号，从 0 开始，不得大于等于本行的总列数。
-     * @returns 文本段和文本段中的字符位置。
+     * 
+     * @returns $span: 指定列号落在哪个 ShSpanElement 元素内。如果指定列号超出了本行最后一个 ShSpanElement 元素中最后字符的列号，那么 $span 为 null。
+     * 
+     *          charIndex: 指定列号在 $span 中的字符位置，从 0 开始。如果指定列号大于本行最后一个字符的列号，那么 charIndex 为指定列号减去本行文本的总列数。
+     *                     例如，对于一行文本 "abc"，如果指定列号为 4，那么 $span 为 null，charIndex 为 1。
      */
     public _columnToCharIndex(col: number): { $span: ShSpanElement | null, charIndex: number } {
-        shlib.assert(0 <= col && col < this.countColumns())
+        shlib.assert(0 <= col)
 
         let colInSpan = col
         let $span: ShSpanElement | null = this.firstElementChild as ShSpanElement
         let spanCols = $span?.countColumns() || 0
-        while ($span?.nextElementSibling && colInSpan >= spanCols) {
+        while ($span && colInSpan >= spanCols) {
             colInSpan -= spanCols
             $span = $span!.nextElementSibling as ShSpanElement
+            spanCols = $span?.countColumns() || 0
         }
 
-        if ($span)
-            return {
-                $span,
-                charIndex: colInSpan / ($span.hasAttribute('w')? 2 : 1),
-            }
-        
-        return {
+        return $span ? {
+            $span,
+            charIndex: colInSpan / ($span.hasAttribute('w')? 2 : 1),
+        } : {
             $span: null,
             charIndex: colInSpan,
         }
@@ -71,44 +73,40 @@ export class ShRowElement extends HTMLElement {
         $span2.textContent = $span.textContent!.substring(charIndex)
     }
 
-    public _mergeSpan($prev: HTMLElement, $next: HTMLElement): boolean {
-        if ($prev.hasAttribute('w') !== $next.hasAttribute('w'))
-            return false
+    /**
+     * 在指定位置插入文本段。
+     * 
+     * @param startCol 文本段插入位置，从 0 开始。
+     * @param span 要插入的文本段。
+     */
+    public insertText(startCol: number, span: ShTextSpan) {
+        shlib.assert(0 <= startCol)
+        
+        const { $span, charIndex } = this._columnToCharIndex(startCol)
+        // 将文本段追加到行尾
+        if (! $span) {
+            const $last = this.lastElementChild as ShSpanElement
+            if (! $last?.mergeTextSpan(span, 'end'))
+                this.append(ShSpanElement.create(this._$term!, span))
+        }
+        // 将文本段插入到两个元素当中
+        else if (charIndex === 0) {
+            const $prev = $span.previousElementSibling as ShSpanElement
+            if (! $prev || ! $prev.mergeTextSpan(span, 'end')) {
+                if (! $span.mergeTextSpan(span, 'begin'))
+                    this.insertBefore(ShSpanElement.create(this._$term!, span), $span)
+            }
+        }
+        // 将文本段插入到一个元素中的指定位置
+        else {
+            // 如果要插入的文本段和当前元素的文本风格相同，并且字符显示宽度也相同，且插入位置没有在一个宽字符的中间，那么可以直接合并
+            if (charIndex === Math.floor(charIndex) && compareTextStyle($span.textStyle, span.style) && $span.charWidth === span.charWidth) {
+                $span.textContent = $span.textContent!.substring(0, charIndex) + span.text + $span.textContent!.substring(charIndex)
+            }
+            // 否则需要将当前元素分裂后再插入
+            else {
 
-        if ($prev.style.fontFamily !== $next.style.fontFamily)
-            return false
-
-        if ($prev.style.fontSize !== $next.style.fontSize)
-            return false
-
-        if ($prev.style.color !== $next.style.color)
-            return false
-
-        if ($prev.style.backgroundColor !== $next.style.backgroundColor)
-            return false
-
-        if ($prev.style.fontWeight !== $next.style.fontWeight)
-            return false
-
-        if ($prev.style.fontStyle !== $next.style.fontStyle)
-            return false
-
-        if ($prev.style.textDecoration !== $next.style.textDecoration)
-            return false
-
-        if ($prev.style.letterSpacing !== $next.style.letterSpacing)
-            return false
-
-        $prev.textContent += $next.textContent!
-        return true
-    }
-
-    public _appendSpan(...spans: ShTextSpan[]) {
-        for (const sp of spans) {
-            const $span = ShSpanElement.create(this._$term!, sp)
-            const $last = this.lastElementChild as HTMLElement
-            if ((! $last) || (! this._mergeSpan($last, $span)))
-                this.append($span)
+            }
         }
     }
 }

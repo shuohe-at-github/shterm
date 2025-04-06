@@ -14,6 +14,15 @@ export interface ShTextStyle {
     underline: boolean
 }
 
+export function compareTextStyle(a: ShTextStyle, b: ShTextStyle): boolean {
+    return a.font.eq(b.font)
+        && a.foreColor === b.foreColor
+        && a.backColor === b.backColor
+        && a.bold === b.bold
+        && a.italic === b.italic
+        && a.underline === b.underline
+}
+
 /**
  * 文本段类。一个文本段中，所有字符的显示宽度都相同。
  */

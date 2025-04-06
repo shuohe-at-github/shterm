@@ -1,6 +1,6 @@
 import * as shlib from '../shlib'
 
-import { ShTextStyle, ShTextSpan } from './ShTextSpan'
+import { ShTextStyle, compareTextStyle, ShTextSpan } from './ShTextSpan'
 import { ShTerm } from './index'
 
 
@@ -16,6 +16,7 @@ export class ShSpanElement extends HTMLElement {
 
     private _$term: ShTerm | null = null
     private _textStyle: ShTextStyle | null = null
+    private _charWidth: number | null = null
 
     constructor() {
         super()
@@ -23,6 +24,16 @@ export class ShSpanElement extends HTMLElement {
 
     public set $term(val: ShTerm) {
         this._$term = val
+    }
+
+    public get textStyle(): ShTextStyle {
+        shlib.assert(this._textStyle).hasValue()
+        return this._textStyle!
+    }
+
+    public get charWidth(): number {
+        shlib.assert(this._charWidth).hasValue()
+        return this._charWidth!
     }
 
     public countColumns(): number {
@@ -38,7 +49,8 @@ export class ShSpanElement extends HTMLElement {
         shlib.assert(shlib.Font.charType(span.text[0]) !== 'ctrl')
 
         const nc = this._$term!.charWidthToCols(span.charWidth!)
-        const letterSpacing = nc * this._$term!.columnWidth - span.charWidth!
+        const letterSpacing = nc * this._$term!.columnWidth - span.charWidth
+        this._charWidth = span.charWidth
 
         this.textContent = span.text
         if (nc === 2)
@@ -80,17 +92,10 @@ export class ShSpanElement extends HTMLElement {
         shlib.assert(this._$term).hasValue()
         const thisSpan = this.toTextSpan()
 
+        if (! compareTextStyle(thisSpan.style, span.style))
+            return false
+
         if (thisSpan.charWidth !== span.charWidth)
-            return false
-
-        const st = span.style
-        if (! thisSpan.style.font.eq(st.font))
-            return false
-
-        if (thisSpan.style.foreColor !== st.foreColor || thisSpan.style !.backColor!== st.backColor)
-            return false
-
-        if (thisSpan.style!.bold !== st.bold || thisSpan.style!.italic !== st.italic || thisSpan.style!.underline !== st.underline)
             return false
 
         if (where === 'begin')
@@ -99,6 +104,46 @@ export class ShSpanElement extends HTMLElement {
             this.textContent += span.text
 
         return true
+    }
+
+    /**
+     * 将文本段从指定位置分裂成两个文本段。
+     * 
+     * @param charIndex 要分裂的字符位置，从 0 开始，必须小于文本长度。
+     * @returns 分裂出的文本段元素数组。如果要分裂的位置在一个宽字符中间，则该宽字符会被分裂成两个窄的空白字符。
+     */
+    public split(charIndex: number): (ShSpanElement | null)[] {
+        shlib.assert(this._$term).hasValue()
+        shlib.assert(0 <= charIndex && charIndex <= this.textContent!.length)
+
+        const txt = this.textContent!
+
+        if (charIndex === 0)
+            return [null, this]
+        else if (charIndex === txt.length)
+            return [this, null]
+
+        if (charIndex === Math.floor(charIndex)) {
+            const $span2 = this.cloneNode(true) as ShSpanElement
+            this.textContent = txt.substring(0, charIndex)
+            $span2.textContent = txt.substring(charIndex)
+            return [this, $span2] 
+        }
+
+        // charIndex 是小数，意味着分裂位置在一个宽字符中间，需要将这个宽字符分裂成两个窄的空白字符
+        const $span2 = ShSpanElement.create(this._$term!, ShTextSpan.create(' ', this._textStyle!, this._$term!.options))
+        const $span3 = $span2.cloneNode(true) as ShSpanElement
+        const $span4 = this.cloneNode(true) as ShSpanElement
+        this.textContent = txt.substring(0, Math.floor(charIndex))
+        $span4.textContent = txt.substring(Math.ceil(charIndex))
+
+        return [
+            charIndex > 1 ? this : null,
+            $span2,
+            $span3,
+            charIndex < txt.length - 1 ? $span4 : null,
+        ]
+
     }
 
     /**
