@@ -26,6 +26,7 @@ export class ShRowElement extends HTMLElement {
         return ncols
     }
 
+    
     /**
      * 根据列号定位到文本段，以及文本段中的字符位置。
      * 
@@ -57,58 +58,89 @@ export class ShRowElement extends HTMLElement {
         }
     }
 
-    public _splitSpan($span: HTMLElement, charIndex: number) {
-        shlib.assert($span.parentElement === this)
-        shlib.assert(charIndex >= 0 && charIndex < $span.textContent!.length)
+    public deleteColumns(startCol: number, endCol?: number): ShSpanElement | null {
+        shlib.assert(this._$term).hasValue()
 
-        const $span2 = $span.cloneNode(false) as HTMLElement
+        const ncols = this.countColumns()
+        if (endCol === undefined || endCol > ncols)
+            endCol = ncols
+        shlib.assert(0 <= startCol && startCol <= endCol)
 
-        // startCol 落在一个宽字符的中间，需要将这个字符分解为两个窄的空白字符
-        if (charIndex > Math.floor(charIndex)) {
+        const { $span: $span1, charIndex: charIndex1 } = this._columnToCharIndex(startCol)
+        const { $span: $span2, charIndex: charIndex2 } = this._columnToCharIndex(endCol)
+
+        if (! $span1)
+            return null
+        
+        let $delete = this._splitSpan($span1!, charIndex1)
+        // 如果要删除的内容在同一个文本段内
+        if ($span1 === $span2) {
 
         }
 
-        $span.textContent = $span.textContent!.substring(0, charIndex)
-        this.insertBefore($span2, $span.nextSibling)
-        $span2.textContent = $span.textContent!.substring(charIndex)
     }
 
     /**
-     * 在指定位置插入文本段。
+     * 将文本段元素从指定位置断开，为删除和插入文本段做准备。
      * 
-     * @param startCol 文本段插入位置，从 0 开始。
-     * @param span 要插入的文本段。
+     * @param $span 要断开的文本段元素。
+     * @param charIndex 断开位置的字符索引，必须大于等于 0，且小于等于文本段内容字符长度。如果该索引是小数，说明断开位置在一个宽字符的中间。
+     * @returns 紧挨在断开位置右边的文本段元素，如果断开位置在文本段尾部，则返回 null
      */
-    public insertText(startCol: number, span: ShTextSpan) {
-        shlib.assert(0 <= startCol)
-        
-        const { $span, charIndex } = this._columnToCharIndex(startCol)
-        // 将文本段追加到行尾
-        if (! $span) {
-            const $last = this.lastElementChild as ShSpanElement
-            if (! $last?.mergeTextSpan(span, 'end'))
-                this.append(ShSpanElement.create(this._$term!, span))
-        }
-        // 将文本段插入到两个元素当中
-        else if (charIndex === 0) {
-            const $prev = $span.previousElementSibling as ShSpanElement
-            if (! $prev || ! $prev.mergeTextSpan(span, 'end')) {
-                if (! $span.mergeTextSpan(span, 'begin'))
-                    this.insertBefore(ShSpanElement.create(this._$term!, span), $span)
-            }
-        }
-        // 将文本段插入到一个元素中的指定位置
-        else {
-            // 如果要插入的文本段和当前元素的文本风格相同，并且字符显示宽度也相同，且插入位置没有在一个宽字符的中间，那么可以直接合并
-            if (charIndex === Math.floor(charIndex) && compareTextStyle($span.textStyle, span.style) && $span.charWidth === span.charWidth) {
-                $span.textContent = $span.textContent!.substring(0, charIndex) + span.text + $span.textContent!.substring(charIndex)
-            }
-            // 否则需要将当前元素分裂后再插入
-            else {
+    private _splitSpan($span: ShSpanElement, charIndex: number): ShSpanElement | null {
+        shlib.assert($span.parentElement === this)
+        shlib.assert($span.textContent!.length > 0)
+        shlib.assert(0 <= charIndex && charIndex <= $span.textContent!.length)
 
+        if (charIndex === 0)
+            return $span
+        if (charIndex === $span.textContent!.length)
+            return $span.nextElementSibling as ShSpanElement
+        
+        const txt1 = $span.textContent!.substring(0, Math.floor(charIndex))
+        const txt2 = $span.textContent!.substring(Math.ceil(charIndex))
+
+        let $space1: ShSpanElement | null = null
+        let $space2: ShSpanElement | null = null
+        if (Math.floor(charIndex) < charIndex) {
+            $space1 = ShSpanElement.create(this._$term!, ' ', $span.textStyle)
+            $space2 = ShSpanElement.create(this._$term!, ' ', $span.textStyle)
+        }
+
+        // 如果切割点左边有内容
+        if (txt1) {
+            $span.textContent = txt1
+            if ($space1) {
+                $span.insertAdjacentElement('afterend', $space1)
+                $space1.insertAdjacentElement('afterend', $space2!)
             }
+
+            let $right: ShSpanElement | null = null
+            if (txt2) {
+                $right = ShSpanElement.create(this._$term!, txt2, $span.textStyle)
+                if ($space2)
+                    $space2.insertAdjacentElement('afterend', $right)
+                else
+                    $span.insertAdjacentElement('afterend', $right)
+            }
+
+            return $space2 || $right
+        }
+        // 如果切割点左边没内容
+        else {
+            // 此时一定是切割在第一个字符（一定是宽字符）的中间，即 charIndex === 0.5
+            shlib.assert($space1).hasValue()
+            $span.insertAdjacentElement('beforebegin', $space1!)
+            $span.insertAdjacentElement('beforebegin', $space2!)                
+            if (txt2)
+                $span.textContent = txt2
+            else
+                $span.remove()
+
+            return $space2
         }
     }
+
 }
 
 customElements.define('shterm-row', ShRowElement)

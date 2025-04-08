@@ -6,10 +6,17 @@ import { ShTerm } from './index'
 
 export class ShSpanElement extends HTMLElement {
 
-    public static create($term: ShTerm, span: ShTextSpan): ShSpanElement {
+    public static create($term: ShTerm, text: string, style: Partial<ShTextStyle>): ShSpanElement;
+    public static create($term: ShTerm, span: ShTextSpan): ShSpanElement;
+
+    public static create($term: ShTerm, textOrSpan: string | ShTextSpan, style: Partial<ShTextStyle> = {}): ShSpanElement {
         const $span = shlib.createElement('shterm-span') as ShSpanElement
         $span._$term = $term
-        $span.fromTextSpan(span)
+
+        if (typeof textOrSpan === 'string')
+            $span.fromTextSpan(ShTextSpan.create(textOrSpan, style, $term.options))
+        else
+            $span.fromTextSpan(textOrSpan)
 
         return $span
     }
@@ -48,7 +55,7 @@ export class ShSpanElement extends HTMLElement {
         shlib.assert(this._$term).hasValue()
         shlib.assert(shlib.Font.charType(span.text[0]) !== 'ctrl')
 
-        const nc = this._$term!.charWidthToCols(span.charWidth!)
+        const nc = this._$term!.charWidthToColumns(span.charWidth!)
         const letterSpacing = nc * this._$term!.columnWidth - span.charWidth
         this._charWidth = span.charWidth
 

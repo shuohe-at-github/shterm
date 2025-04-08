@@ -8,8 +8,9 @@ import './shterm.css'
 import * as shlib from '../shlib'
 
 import { ShTermOptions } from './ShTermOptions'
-import { ShTextStyle } from './ShTextSpan'
+import { ShTextSpan, ShTextStyle } from './ShTextSpan'
 import { ShRowElement } from './ShRowElement'
+import { ShSpanElement } from './ShSpanElement'
 
 export class ShTerm {
 
@@ -93,14 +94,25 @@ export class ShTerm {
         return this._maxColumns
     }
 
-    public charWidthToCols(cw: number): number {
+    public charWidthToColumns(cw: number): number {
         return (cw > this._columnWidth) ? 2 : 1
     }
 
     public drawText(row: number, col: number, text: string, style: Partial<ShTextStyle> = {}) {
-        shlib.assert(row >= 0 && row < this._maxRows)
-        shlib.assert(col >= 0 && col < this._maxColumns)
+        shlib.assert(0 <= row && row < this._maxRows)
+        shlib.assert(0 <= col && col < this._maxColumns)
+        shlib.assert(text.length > 0)
 
+        // const $row = this._getRowAtScreen(row)
+        // const spans = ShTextSpan.splitText(text, style, this._options)
+
+        // const $p = $row.deleteColumns(col, col + this._countSpansColumns(spans))
+        // for (const sp of spans) {
+        //     if (shlib.Font.charType(sp.text[0]) === 'ctrl')
+        //         continue
+
+        //     // 将 sp 插入到 $p 的前面
+        // }
     }
 
     /**
@@ -134,12 +146,14 @@ export class ShTerm {
         })
     }
 
-    public _caretMoveTo(row: number, col: number) {
-        shlib.assert(row >= 0 && row < this._maxRows)
-        shlib.assert(col >= 0 && col < this._maxColumns)
+    private _countSpansColumns(spans: ShTextSpan[]): number {
+        let nc = 0
+        for (const sp of spans) {
+            if (sp.charWidth === 0)
+                continue
+            nc += this.charWidthToColumns(sp.charWidth) * sp.text.length
+        }
 
-        this._caretRow = row
-        this._caretColumn = col
+        return nc
     }
-
 }
