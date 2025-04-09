@@ -61,6 +61,7 @@ export class ShRowElement extends HTMLElement {
     public deleteColumns(startCol: number, endCol?: number): ShSpanElement | null {
         shlib.assert(this._$term).hasValue()
 
+        // 结束位置最多到行尾，起始位置不能大于结束位置
         const ncols = this.countColumns()
         if (endCol === undefined || endCol > ncols)
             endCol = ncols
@@ -68,79 +69,43 @@ export class ShRowElement extends HTMLElement {
 
         const { $span: $span1, charIndex: charIndex1 } = this._columnToCharIndex(startCol)
         const { $span: $span2, charIndex: charIndex2 } = this._columnToCharIndex(endCol)
-
+        // 如果起始位置就在行尾，则直接返回
         if (! $span1)
             return null
         
-        let $delete = this._splitSpan($span1!, charIndex1)
-        // 如果要删除的内容在同一个文本段内
-        if ($span1 === $span2) {
+        const txt1 = $span1.textContent!.substring(0, Math.floor(charIndex1))
+        const txt2 = $span2?.textContent!.substring(Math.ceil(charIndex2)) || ''
 
+        const $space1 = (Math.floor(charIndex1) < charIndex1) ? ShSpanElement.create(this._$term!, ' ', $span1!.textStyle) : null
+        const $space2 = (charIndex2 < Math.ceil(charIndex2)) ? ShSpanElement.create(this._$term!, ' ', $span2!.textStyle): null
+
+        if (txt1)
+            $span1.insertAdjacentElement('beforebegin', ShSpanElement.create(this._$term!, txt1, $span1!.textStyle))
+        if ($space1)
+            $span1.insertAdjacentElement('beforebegin', $space1)
+
+        let $sp: ShSpanElement | null = $span1
+        while ($sp !== $span2) {
+            const $next = $sp.nextElementSibling as ShSpanElement
+            $sp.remove()
+            $sp = $next
         }
 
-    }
+        if ($span2) {
+            const $right = ShSpanElement.create(this._$term!, txt2, $span2!.textStyle)
+            $span2.insertAdjacentElement('afterend', $right)
+            $sp = $right
 
-    /**
-     * 将文本段元素从指定位置断开，为删除和插入文本段做准备。
-     * 
-     * @param $span 要断开的文本段元素。
-     * @param charIndex 断开位置的字符索引，必须大于等于 0，且小于等于文本段内容字符长度。如果该索引是小数，说明断开位置在一个宽字符的中间。
-     * @returns 紧挨在断开位置右边的文本段元素，如果断开位置在文本段尾部，则返回 null
-     */
-    private _splitSpan($span: ShSpanElement, charIndex: number): ShSpanElement | null {
-        shlib.assert($span.parentElement === this)
-        shlib.assert($span.textContent!.length > 0)
-        shlib.assert(0 <= charIndex && charIndex <= $span.textContent!.length)
-
-        if (charIndex === 0)
-            return $span
-        if (charIndex === $span.textContent!.length)
-            return $span.nextElementSibling as ShSpanElement
-        
-        const txt1 = $span.textContent!.substring(0, Math.floor(charIndex))
-        const txt2 = $span.textContent!.substring(Math.ceil(charIndex))
-
-        let $space1: ShSpanElement | null = null
-        let $space2: ShSpanElement | null = null
-        if (Math.floor(charIndex) < charIndex) {
-            $space1 = ShSpanElement.create(this._$term!, ' ', $span.textStyle)
-            $space2 = ShSpanElement.create(this._$term!, ' ', $span.textStyle)
-        }
-
-        // 如果切割点左边有内容
-        if (txt1) {
-            $span.textContent = txt1
-            if ($space1) {
-                $span.insertAdjacentElement('afterend', $space1)
-                $space1.insertAdjacentElement('afterend', $space2!)
+            if ($space2) {
+                $span2.insertAdjacentElement('afterend', $space2)
+                $sp = $space2
             }
 
-            let $right: ShSpanElement | null = null
-            if (txt2) {
-                $right = ShSpanElement.create(this._$term!, txt2, $span.textStyle)
-                if ($space2)
-                    $space2.insertAdjacentElement('afterend', $right)
-                else
-                    $span.insertAdjacentElement('afterend', $right)
-            }
-
-            return $space2 || $right
+            $span2.remove()
         }
-        // 如果切割点左边没内容
-        else {
-            // 此时一定是切割在第一个字符（一定是宽字符）的中间，即 charIndex === 0.5
-            shlib.assert($space1).hasValue()
-            $span.insertAdjacentElement('beforebegin', $space1!)
-            $span.insertAdjacentElement('beforebegin', $space2!)                
-            if (txt2)
-                $span.textContent = txt2
-            else
-                $span.remove()
 
-            return $space2
-        }
+        return $sp
     }
-
 }
 
 customElements.define('shterm-row', ShRowElement)
