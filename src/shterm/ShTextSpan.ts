@@ -75,11 +75,27 @@ export class ShTextSpan {
                 ci = i
                 cw = w
                 cf = f
+
+                if (c === '\x1b') {
+                    const s = text.substring(i + 1)
+                    const matchResult = s.match(/^\[(\d+)?(,(\d+))?([A-Hm])/)
+                    if (matchResult) { // 匹配到合法的 ANSI 转义序列
+                        // 加入结果集
+                        result.push(ShTextSpan.create(
+                            '\x1b' + matchResult[0],
+                            Object.assign({}, style, { font: cf }),
+                            options,
+                        ))
+                        // 跳过转义序列
+                        i += matchResult[0].length + 1
+                        ci = i
+                    }
+                }
             }
 
             // 继续累积当前文本段
         }
-        if (ci >= 0) {
+        if (ci >= 0 && ci < text.length) {
             result.push(ShTextSpan.create(
                 text.substring(ci),
                 Object.assign({}, style, { font: cf }),
@@ -119,9 +135,10 @@ export class ShTextSpan {
         this.charWidth = this.style.font.charWidth(text[0], this.style.bold)
 
         // 检查文本段中每个字符的显示宽度是否一致
-        for (let i = 1; i < text.length; i++) {
-            const w = this.style.font.charWidth(text[i], this.style.bold)
-            shlib.assert(w === this.charWidth, '错误：文本段中字符显示宽度不同。')
-        }
+        if (this.charWidth > 0)
+            for (let i = 1; i < text.length; i++) {
+                const w = this.style.font.charWidth(text[i], this.style.bold)
+                shlib.assert(w === this.charWidth, '错误：文本段中字符显示宽度不同。')
+            }
     }
 }

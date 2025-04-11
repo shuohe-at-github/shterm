@@ -1,6 +1,5 @@
 import { expect } from 'chai'
 
-import * as shlib from '../../shlib'
 import { ShTextSpan, ShTerm, ShSpanElement, ShRowElement } from '..'
 
 describe('shterm.ShRowElement', () => {
@@ -65,9 +64,7 @@ describe('shterm.ShRowElement', () => {
             const $row = ShRowElement.create($term!)
 
             expect($row.deleteColumns(0)).to.be.null
-            expect(() => {
-                $row.deleteColumns(3)
-            }).to.throw()
+            expect($row.deleteColumns(3)).to.be.null
         })
 
         it('一个英文文本段', () => {
@@ -199,9 +196,23 @@ describe('shterm.ShRowElement', () => {
             })
 
             it('从第二段中间删除到第三段中间', () => {
-                
+                let $result = $row!.deleteColumns(10, 25)
+                expect($row!.children.length).to.eq(4)
+                expect($row!.children[0].textContent).to.eq('abcdefg')
+                expect($row!.children[1].textContent).to.eq('中')
+                expect($row!.children[2].textContent).to.eq(' ')
+                expect($row!.children[3].textContent).to.eq('yz')
+                expect($result).to.eq($row!.children[3])
             })
 
+            it('删除点就在两段中间', () => {
+                let $result = $row!.deleteColumns(7, 7)
+                expect($row!.children.length).to.eq(3)
+                expect($row!.children[0].textContent).to.eq('abcdefg')
+                expect($row!.children[1].textContent).to.eq('中华人民共和国')
+                expect($row!.children[2].textContent).to.eq('uvwxyz')
+                expect($result).to.eq($row!.children[1])
+            })
         })
     })
 })

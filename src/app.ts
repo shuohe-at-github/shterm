@@ -8,3 +8,5 @@ const $term = new ShTerm(document.getElementById('shterm')!, {
     cnFontName: '楷体',
     cnFontSize: 20,
 })
+
+$term.enableKeyboardInput()

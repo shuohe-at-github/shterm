@@ -106,104 +106,26 @@ export class ShSpanElement extends HTMLElement {
             return false
 
         if (where === 'begin')
-            this.textContent = span.text + this.textContent
+            this.setText(span.text + this.textContent)
         else
-            this.textContent += span.text
+            this.setText(this.textContent + span.text)
 
         return true
     }
 
     /**
-     * 将文本段从指定位置分裂成两个文本段。
+     * 更改文本段内容，并同步更新 CSS 样式宽度。
      * 
-     * @param charIndex 要分裂的字符位置，从 0 开始，必须小于文本长度。
-     * @returns 分裂出的文本段元素数组。如果要分裂的位置在一个宽字符中间，则该宽字符会被分裂成两个窄的空白字符。
+     * @param text 要设置的文本内容
      */
-    public split(charIndex: number): (ShSpanElement | null)[] {
+    public setText(text: string) {
         shlib.assert(this._$term).hasValue()
-        shlib.assert(0 <= charIndex && charIndex <= this.textContent!.length)
+        shlib.assert(ShTextSpan.create(text, this._textStyle!, this._$term!.options).charWidth === this.toTextSpan().charWidth)
 
-        const txt = this.textContent!
+        this.textContent = text
 
-        if (charIndex === 0)
-            return [null, this]
-        else if (charIndex === txt.length)
-            return [this, null]
-
-        if (charIndex === Math.floor(charIndex)) {
-            const $span2 = this.cloneNode(true) as ShSpanElement
-            this.textContent = txt.substring(0, charIndex)
-            $span2.textContent = txt.substring(charIndex)
-            return [this, $span2] 
-        }
-
-        // charIndex 是小数，意味着分裂位置在一个宽字符中间，需要将这个宽字符分裂成两个窄的空白字符
-        const $span2 = ShSpanElement.create(this._$term!, ShTextSpan.create(' ', this._textStyle!, this._$term!.options))
-        const $span3 = $span2.cloneNode(true) as ShSpanElement
-        const $span4 = this.cloneNode(true) as ShSpanElement
-        this.textContent = txt.substring(0, Math.floor(charIndex))
-        $span4.textContent = txt.substring(Math.ceil(charIndex))
-
-        return [
-            charIndex > 1 ? this : null,
-            $span2,
-            $span3,
-            charIndex < txt.length - 1 ? $span4 : null,
-        ]
-
-    }
-
-    /**
-     * 将本文本段当中的指定列数的内容删除，返回因为删除而分裂出的文本段数组。
-     * 
-     * @param startCol 要删除内容的在本文本段内的起始列号。必须满足 0 <= startCol < endCol。
-     * @param endCol 要删除内容在本文本段内的结束列号（不包括）。如果未指定，或者值大于文本段的总列数，则视为删除到文本段末尾。
-     * @returns 因为删除而分裂出的文本段数组。
-     */
-    public deleteText(startCol: number, endCol?: number): ShSpanElement[] {
-        shlib.assert(this._$term).hasValue()
-
-        const ncols = this.countColumns()
-        if (endCol === undefined || endCol > ncols)
-            endCol = ncols
-        shlib.assert(0 <= startCol && startCol < endCol)
-
-        const startIndex = this.columnToCharIndex(startCol)
-        const endIndex = this.columnToCharIndex(endCol)
-    
-        const ts = this.toTextSpan()
-        const $spans = [] as ShSpanElement[]
-
-        if (startIndex >= 1) {
-            this.textContent = ts.text.substring(0, Math.floor(startIndex))
-            $spans.push(this)
-        }
-        if (startIndex > Math.floor(startIndex))
-            $spans.push(ShSpanElement.create(this._$term!, new ShTextSpan(
-                ' ',
-                Object.assign({}, ts.style, { font: this._$term!.options.defaultEnFont, }),
-                this._$term!.options,
-            )))
-        if (endIndex > Math.floor(endIndex))
-            $spans.push(ShSpanElement.create(this._$term!, new ShTextSpan(
-                ' ',
-                Object.assign({}, ts.style, { font: this._$term!.options.defaultEnFont, }),
-                this._$term!.options,
-            )))
-        if (Math.ceil(endIndex) < ts.text.length) {
-            if (startIndex >= 1) {
-                $spans.push(ShSpanElement.create(this._$term!, {
-                    text: ts.text.substring(Math.ceil(endIndex)),
-                    style: ts.style,
-                    charWidth: ts.charWidth,
-                }))
-            } else {
-                this.textContent = ts.text.substring(Math.ceil(endIndex))
-                $spans.push(this)
-            }
-        }
-
-        return $spans
+        const nc = this._$term!.charWidthToColumns(this._textStyle!.font.charWidth(this.textContent![0], this._textStyle!.bold))
+        this.style.width = nc * this._$term!.columnWidth * text.length + 'px'
     }
 }
 
