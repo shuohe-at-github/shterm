@@ -114,10 +114,11 @@ export class ShRowElement extends HTMLElement {
 
         if ($span2) {
             // 在 $span2 的右边插入 txt2
-            const $right = ShSpanElement.create(this._$term!, txt2, $span2!.textStyle)
-            $span2.insertAdjacentElement('afterend', $right)
-            $sp = $right
-
+            if (txt2) {
+                const $right = ShSpanElement.create(this._$term!, txt2, $span2!.textStyle)
+                $span2.insertAdjacentElement('afterend', $right)
+                $sp = $right
+            }
             // 在 $span2 的右边插入 $space2
             if ($space2) {
                 $span2.insertAdjacentElement('afterend', $space2)

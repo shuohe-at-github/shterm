@@ -7,15 +7,15 @@ import { ShTermOptions } from './ShTermOptions'
  */
 export interface ShTextStyle {
     font: shlib.Font
-    foreColor: string   // CSS 颜色字符串
-    backColor: string   // CSS 颜色字符串
+    foreColor: string   // CSS 颜色字符串，'' 表示默认颜色
+    backColor: string   // CSS 颜色字符串，'' 表示默认颜色
     bold: boolean
     italic: boolean
     underline: boolean
 }
 
 export function compareTextStyle(a: ShTextStyle, b: ShTextStyle): boolean {
-    return a.font.eq(b.font)
+    return a.font === b.font
         && a.foreColor === b.foreColor
         && a.backColor === b.backColor
         && a.bold === b.bold
@@ -126,8 +126,8 @@ export class ShTextSpan {
         this.text = text
         this.style = {
             font: style.font || options.chooseFontForChar(text[0]),
-            foreColor: style.foreColor || options.foreColor,
-            backColor: style.backColor || options.backColor,
+            foreColor: style.foreColor || '',
+            backColor: style.backColor || '',
             bold: style.bold || false,
             italic: style.italic || false,
             underline: style.underline || false,

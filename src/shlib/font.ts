@@ -74,6 +74,17 @@ export class Font {
     private _charWidthCache: Map<string, number>
     private _hasGlyphCache: Map<number, boolean>
 
+    public static fromCssValue(v: string): Font {
+        const ss = v.split(' ')
+        assert(ss.length === 2)
+        assert(ss[0].endsWith('px'))
+
+        const sizeInPixel = parseInt(ss[0])
+        assert(sizeInPixel > 0)
+
+        return new Font(ss[1], sizeInPixel)
+    }
+
     constructor(name: string, sizeInPixel: number) {
         assert(name.length > 0)
         assert(sizeInPixel > 0)
@@ -82,7 +93,7 @@ export class Font {
         this._sizeInPixel = sizeInPixel
         this._isChineseFont = ChineseFonts.includes(this._name)
 
-        Font.$ctx.font = `${this._sizeInPixel}px ${this._name}`
+        Font.$ctx.font = this.cssValue
         const w1 = this.measureText('i').width
         const w2 = this.measureText('W').width
 
@@ -105,6 +116,13 @@ export class Font {
         return this._sizeInPixel
     }
 
+    public get cssValue(): string {
+        if (this._name[0] === '"')
+            return `${this._sizeInPixel}px ${this._name}`
+        else
+            return `${this._sizeInPixel}px "${this._name}"`
+    }
+    
     public get monoCharWidth(): number {
         return this._monoCharWidth
     }

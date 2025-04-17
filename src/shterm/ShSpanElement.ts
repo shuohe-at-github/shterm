@@ -22,7 +22,6 @@ export class ShSpanElement extends HTMLElement {
     }
 
     private _$term: ShTerm | null = null
-    private _textStyle: ShTextStyle | null = null
     private _charWidth: number | null = null
 
     constructor() {
@@ -34,8 +33,22 @@ export class ShSpanElement extends HTMLElement {
     }
 
     public get textStyle(): ShTextStyle {
-        shlib.assert(this._textStyle).hasValue()
-        return this._textStyle!
+        let f: shlib.Font
+        if (! this.style.font)
+            f = this._$term!.options.defaultEnFont
+        else if (this.style.font === 'var(--shterm-cn-font)')
+            f = this._$term!.options.defaultCnFont
+        else
+            f = shlib.Font.fromCssValue(this.style.font)
+
+        return {
+            font: f,
+            foreColor: this.style.color,
+            backColor: this.style.backgroundColor,
+            bold: this.style.fontWeight === 'bold',
+            italic: this.style.fontStyle === 'italic',
+            underline: this.style.textDecoration === 'underline',
+        }
     }
 
     public get charWidth(): number {
@@ -55,37 +68,33 @@ export class ShSpanElement extends HTMLElement {
         shlib.assert(this._$term).hasValue()
         shlib.assert(shlib.Font.charType(span.text[0]) !== 'ctrl')
 
-        const nc = this._$term!.charWidthToColumns(span.charWidth!)
-        const letterSpacing = nc * this._$term!.columnWidth - span.charWidth
-        this._charWidth = span.charWidth
+        const __makeFontCssValue = (font: shlib.Font) => {
+            if (font === this._$term!.options.defaultEnFont)
+                return ''
+            else if (font === this._$term!.options.defaultCnFont)
+                return 'var(--shterm-cn-font)'
+            else
+                return font.cssValue
+        } 
 
         this.textContent = span.text
-        if (nc === 2)
-            this.setAttribute('w', '')
-        else
-            this.removeAttribute('w')
 
-        const st = span.style
-        this._textStyle = st
-        this.updateStyle({
-            fontFamily: st.font.name === this._$term!.options.defaultEnFont.name ? '' : st.font.name,
-            fontSize: st.font.size === this._$term!.options.defaultEnFont.size ? '' : `${st.font.size}px`,
-            color: st.foreColor === this._$term!.options.foreColor ? '' : st.foreColor,
-            backgroundColor: st.backColor === this._$term!.options.backColor ? '' : st.backColor!,
-            fontWeight: st.bold ? 'bold' : '',
-            fontStyle: st.italic ? 'italic' : '',
-            textDecoration: st.underline ? 'underline' : '',
-            width: nc * this._$term!.columnWidth * span.text.length + 'px',
-            paddingLeft: letterSpacing ? (letterSpacing / 2 + 'px') : '',
-            letterSpacing: letterSpacing ? (letterSpacing + 'px') : '',
+        this.updateCssStyle({
+            font: __makeFontCssValue(span.style.font),
+            color: span.style.foreColor,
+            backgroundColor: span.style.backColor,
+            fontWeight: span.style.bold ? 'bold' : '',
+            fontStyle: span.style.italic ? 'italic' : '',
+            textDecoration: span.style.underline ? 'underline' : '',
         })
+
+        this.updateLayout()
     }
 
     public toTextSpan(): ShTextSpan {
         shlib.assert(this._$term).hasValue()
-        shlib.assert(this._textStyle).hasValue()
 
-        return ShTextSpan.create(this.textContent!, this._textStyle!, this._$term!.options)
+        return ShTextSpan.create(this.textContent!, this.textStyle, this._$term!.options)
     }
 
     /**
@@ -120,12 +129,42 @@ export class ShSpanElement extends HTMLElement {
      */
     public setText(text: string) {
         shlib.assert(this._$term).hasValue()
-        shlib.assert(ShTextSpan.create(text, this._textStyle!, this._$term!.options).charWidth === this.toTextSpan().charWidth)
+        shlib.assert(ShTextSpan.create(text, this.textStyle, this._$term!.options).charWidth === this.toTextSpan().charWidth)
 
         this.textContent = text
 
-        const nc = this._$term!.charWidthToColumns(this._textStyle!.font.charWidth(this.textContent![0], this._textStyle!.bold))
+        const nc = this._$term!.charWidthToColumns(this.textStyle.font.charWidth(this.textContent![0], this.textStyle.bold))
         this.style.width = nc * this._$term!.columnWidth * text.length + 'px'
+    }
+
+    public mergeSibling() {
+        const $prev = this.previousElementSibling as ShSpanElement | null
+        const $next = this.nextElementSibling as ShSpanElement | null
+
+        if ($prev && this.mergeTextSpan($prev.toTextSpan(), 'begin'))
+            $prev.remove()
+        if ($next && this.mergeTextSpan($next.toTextSpan(), 'end'))
+            $next.remove()
+    }
+
+    public updateLayout() {
+        shlib.assert(this._$term).hasValue()
+
+        const span = this.toTextSpan()
+
+        const nc = this._$term!.charWidthToColumns(span.charWidth)
+        const letterSpacing = nc * this._$term!.columnWidth - span.charWidth
+        this._charWidth = span.charWidth
+
+        if (nc === 2)
+            this.setAttribute('w', '')
+        else
+            this.removeAttribute('w')
+
+        this.updateCssStyle({
+            width: nc * this._$term!.columnWidth * span.text.length + 'px',
+            '--shterm-span-letterspacing': letterSpacing + 'px',
+        })
     }
 }
 

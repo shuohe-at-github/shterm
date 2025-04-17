@@ -16,8 +16,7 @@
     align-items: flex-start;
     overflow: hidden;
 
-    font-family: var(--shterm-main-font);
-    font-size: var(--shterm-main-font-size);
+    font: var(--shterm-en-font);
     color: var(--shterm-fore-color);
     background-color: var(--shterm-back-color);
 }
@@ -29,8 +28,8 @@
     outline: none;
     padding: 0px;
     margin: 0px;    
-    color: var(--shterm-fore-color);
-    background-color: transparent;
+    color: 'black';
+    background-color: white;
     caret-color: transparent;
 }
 
@@ -62,6 +61,8 @@ shterm-span {
     user-select: none;
     
     height: var(--shterm-row-height);
+    padding-left: calc(var(--shterm-span-letterspacing) / 2);
+    letter-spacing: var(--shterm-span-letterspacing);
 }
 
 .shterm-scrollbar {

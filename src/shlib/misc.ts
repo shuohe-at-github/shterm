@@ -235,7 +235,7 @@ declare global {
         setClass(className: string): void
         hasClass(className: string): boolean
         toggleClass(className: string, condition?: boolean): void
-        updateStyle(style: string | Record<string, string>): void
+        updateCssStyle(style: string | Record<string, string>): void
         clearStyle(): void
         on(event: string, handler: EventListener, options?: EventListenerOptions): EventListener
         off(event: string, handler: EventListener, options?: EventListenerOptions): void
@@ -340,7 +340,7 @@ Object.assign(HTMLElement.prototype, {
      * 
      * @param newStyle 要设置的 CSS 属性，用文本串或属性对象形式均可
      */
-    updateStyle: function(newStyle: string | Record<string, string>) {
+    updateCssStyle: function(newStyle: string | Record<string, string>) {
         if (newStyle === '' || Object.keys(newStyle).length === 0)
             return
 

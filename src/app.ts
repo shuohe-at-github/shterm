@@ -6,7 +6,16 @@ const $term = new ShTerm(document.getElementById('shterm')!, {
     enFontName: 'Consolas',
     enFontSize: 18,
     cnFontName: '楷体',
-    cnFontSize: 20,
+    cnFontSize: 18,
 })
 
 $term.enableKeyboardInput()
+
+document.getElementById('cmdbar')!.onclick = () => {
+    $term.setOptions({
+        enFontName: 'Consolas',
+        enFontSize: 14,
+        cnFontName: '微软雅黑',
+        cnFontSize: 14,
+    })
+}
