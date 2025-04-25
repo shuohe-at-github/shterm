@@ -3,30 +3,30 @@ import * as shlib from '../shlib'
 /**
  * 全局默认选项。
  */
-export class ShTermOptions {
+export class ShTerm_Options {
     /**
      * 单例的全局默认选项。
      */
-    private static global: ShTermOptions = new ShTermOptions({})
+    private static global: ShTerm_Options = new ShTerm_Options({})
 
     /**
      * 按需设置全局默认选项。
      * 
      * @param options 选项值。
      */
-    public static setGlobal(options: Partial<ShTermOptions>) {
-        ShTermOptions.global = new ShTermOptions(options)
+    public static setGlobal(options: Partial<ShTerm_Options>) {
+        ShTerm_Options.global = new ShTerm_Options(options)
     }
 
     /**
      * 获取全局默认选项。
      */
-    public static getGlobal(): ShTermOptions {
-        return ShTermOptions.global
+    public static getGlobal(): ShTerm_Options {
+        return ShTerm_Options.global
     }
 
-    public static create(options: Partial<ShTermOptions>): ShTermOptions {
-        return new ShTermOptions(options)
+    public static create(options: Partial<ShTerm_Options>): ShTerm_Options {
+        return new ShTerm_Options(options)
     }
 
     public readonly enFontName: string
@@ -43,9 +43,11 @@ export class ShTermOptions {
     /**
      * 构造函数。全局默认选项对象创建后，其中的值不能更改。只能重新创建新的对象。
      * 
+     * 传入的 enFontName 必须是等宽字体；cnFontName 必须是中文字体。
+     * 
      * @param options 按需设置的选项值。
      */
-    constructor(options: Partial<ShTermOptions>) {
+    constructor(options: Partial<ShTerm_Options>) {
         this.enFontName = options.enFontName || 'Consolas'
         this.enFontSize = options.enFontSize || 16
         this.cnFontName = options.cnFontName || '微软雅黑'
@@ -55,10 +57,10 @@ export class ShTermOptions {
         this.backColor = options.backColor || 'black'
 
         this.defaultEnFont = new shlib.Font(this.enFontName, this.enFontSize)
-        shlib.assert(this.defaultEnFont.monoCharWidth > 0)
+        shlib.assert(this.defaultEnFont.monoCharWidth > 0, `错误："${this.enFontName}" 不是一个等宽字体。`)
 
         this.defaultCnFont = new shlib.Font(this.cnFontName, this.cnFontSize)
-        shlib.assert(this.defaultCnFont.hasGlyph('中'))
+        shlib.assert(this.defaultCnFont.hasGlyph('中'), `错误："${this.cnFontName}" 不是一个中文字体。`)
     }
 
     /**

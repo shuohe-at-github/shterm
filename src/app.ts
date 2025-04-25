@@ -1,5 +1,5 @@
 import * as shlib from './shlib'
-import { ShTerm } from './shterm'
+import { ShTerm } from './shterm.v2/ShTerm'
 
 shlib.init()
 const $term = new ShTerm(document.getElementById('shterm')!, {
@@ -8,14 +8,3 @@ const $term = new ShTerm(document.getElementById('shterm')!, {
     cnFontName: '楷体',
     cnFontSize: 18,
 })
-
-$term.enableKeyboardInput()
-
-document.getElementById('cmdbar')!.onclick = () => {
-    $term.setOptions({
-        enFontName: 'Consolas',
-        enFontSize: 14,
-        cnFontName: '微软雅黑',
-        cnFontSize: 14,
-    })
-}

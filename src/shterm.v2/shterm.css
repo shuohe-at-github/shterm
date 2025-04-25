@@ -1,5 +1,4 @@
 .shterm-container {
-    position: relative;
     display: flex;
 }
 
@@ -7,8 +6,9 @@
     box-sizing: border-box;
 }
 
-.shterm-screen {
-    flex: 1 0 0%;
+.shterm-main {
+    position: relative;
+    flex: 1 1 0px;
     overflow: hidden;
     max-height: 100%;
     
@@ -17,16 +17,17 @@
     background-color: var(--shterm-back-color);
 }
 
-.shterm-input {
-    position: absolute;
-    left: -99999px;
-    border: none;
-    outline: none;
-    padding: 0px;
-    margin: 0px;    
-    color: 'black';
-    background-color: white;
-    caret-color: transparent;
+.shterm-scrollbar {
+    width: 7px;
+    background-color: silver;
+}
+
+.shterm-content {
+
+}
+
+.shterm-footer {
+
 }
 
 .shterm-caret {
@@ -43,10 +44,21 @@
     50% { opacity: 0; }
 }
 
-shterm-row {
+.shterm-input {
+    position: absolute;
+    left: -99999px;
+    border: none;
+    outline: none;
+    padding: 0px;
+    margin: 0px;    
+    color: 'black';
+    background-color: white;
+    caret-color: transparent;
+}
+
+shterm-p {
     display: flex;
     align-items: center;
-    height: var(--shterm-row-height);
 }
 
 shterm-span {
@@ -59,9 +71,4 @@ shterm-span {
     height: var(--shterm-row-height);
     padding-left: calc(var(--shterm-span-letterspacing) / 2);
     letter-spacing: var(--shterm-span-letterspacing);
-}
-
-.shterm-scrollbar {
-    width: 7px;
-    background-color: silver;
 }

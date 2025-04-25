@@ -44,6 +44,9 @@ export class ShTerm {
         this.$scrollbar = shlib.createElement('div', 'shterm-scrollbar') as HTMLElement
         this.$container.append(this.$scrollbar)
 
+        // 预先创建第一个空行
+        this.$screen.append(ShRowElement.create(this))
+
         // 创建光标
         this.$caret = shlib.createElement('div', 'shterm-caret') as HTMLElement
         this.$caret.style.display = 'none'
@@ -112,7 +115,10 @@ export class ShTerm {
         shlib.assert(0 <= col && col < this._maxColumns)
         shlib.assert(text.length > 0)
 
-        const $row = this._getRowAtScreen(row)
+        while (this._scrollRow + row >= this.$screen.children.length)
+            this.$screen.append(ShRowElement.create(this))
+
+        const $row = this._getRowAt(row)
         const spans = ShTextSpan.splitText(text, style, this._options)
 
         $row.replaceSpans(col, spans)
@@ -126,31 +132,61 @@ export class ShTerm {
         for (const sp of spans) {
             // 换行符
             if (sp.text === '\n') {
-                this._caretRow++
-                this._caretColumn = 0
-                if (this._caretRow >= this._maxRows) {
-                    this._scrollRow++
-                    this.$screen.scrollBy(0, this._rowHeight)
+                const $row = this._getRowAt(this._caretRow)
+                const rightSpans = $row.extractSpans(this._caretColumn)
+                $row.deleteColumns(this._caretColumn)
+                const $newRow = ShRowElement.create(this)
+                $row.insertAdjacentElement('afterend', $newRow)
+                if (rightSpans)
+                    for (const sp of rightSpans)
+                        $newRow.appendSpan(sp)
+                
+                if (this._caretRow === this._maxRows - 1) {
+                    this._vscroll(1)
+                    this._caretMove(this._caretRow, 0)
+                } else {
+                    this._caretMove(this._caretRow + 1, 0)
                 }
-                this._caretMove()
+
+                continue
+            }
+            // 退格符
+            if (sp.text === '\b') {
+                // 删除光标左边的字符
+                if (this._caretColumn > 0) {
+                    const $row = this._getRowAt(this._caretRow)
+                    const $sp = $row.deleteColumns(this._caretColumn - 1, this._caretColumn)
+                    $sp?.mergeSibling()
+                    this._caretMove(this._caretRow, this._caretColumn - 1)
+                }
                 continue
             }
             // ANSI 转义序列
             if (sp.text[0] === '\x1b') {
-                const matchResult = sp.text.match(/^\x1b\[(\d+)?(;(\d+))?([A-Hm])/)
+                const matchResult = sp.text.match(/^\x1b\[(\d+)?(;(\d+))*([A-Hm])/)
                 if (! matchResult)
                     continue
 
                 // 光标上移
                 if (matchResult[4] === 'A') {
                     const n = parseInt(matchResult[1]) || parseInt(matchResult[3]) || 1
-                    this._caretMove(this._caretRow - n, this._caretColumn)
+                    if (this._caretRow - n < 0) {
+                        const m = this._vscroll(this._caretRow - n)
+                        this._caretMove(this._caretRow + m, this._caretColumn)
+                    } else {
+                        this._caretMove(this._caretRow - n, this._caretColumn)
+                    }
                     continue
                 }
                 // 光标下移
                 if (matchResult[4] === 'B') {
                     const n = parseInt(matchResult[1]) || parseInt(matchResult[3]) || 1
-                    this._caretMove(this._caretRow + n, this._caretColumn)
+                    if (this._caretRow + n >= this._maxRows) {
+                        const m = this._vscroll(this._caretRow + n - this._maxRows + 1)
+                        this._caretMove(this._caretRow + m, this._caretColumn)
+                    } else {
+                        this._caretMove(this._caretRow + n, this._caretColumn)
+                    }
                     continue
                 }
                 // 光标右移
@@ -194,19 +230,7 @@ export class ShTerm {
             }
             // 回车符
             if (sp.text === '\r') {
-                this._caretColumn = 0
-                this._caretMove()
-                continue
-            }
-            // 退格符
-            if (sp.text === '\b') {
-                // 删除光标左边的字符
-                if (this._caretColumn > 0) {
-                    const $row = this._getRowAtScreen(this._caretRow)
-                    const $sp = $row.deleteColumns(this._caretColumn - 1, this._caretColumn)
-                    $sp?.mergeSibling()
-                    this._caretMove(this._caretRow, this._caretColumn - 1)
-                }
+                this._caretMove(this._caretRow, 0)
                 continue
             }
             // 横向制表符
@@ -232,7 +256,7 @@ export class ShTerm {
             }
 
             // 正常文本
-            const $row = this._getRowAtScreen(this._caretRow)
+            const $row = this._getRowAt(this._caretRow)
             if (this._caretMode === 'insert') {
                 const $sp = $row.deleteColumns(this._caretColumn, this._caretColumn)
                 if (! $sp) {
@@ -315,19 +339,33 @@ export class ShTerm {
     }
 
     /**
-     * 返回显示在屏幕上的第 row 行的 Row 对象。必要时创建该对象。
+     * 返回显示在屏幕上的第 row 行的 Row 对象。
      * 
      * @param row 屏幕上的行号，从 0 开始。
      * @returns 显示在屏幕上第 row 行的 Row 对象。
      */
-    private _getRowAtScreen(row: number): ShRowElement {
-        shlib.assert(row >= 0 && row < this._maxRows)
-
+    private _getRowAt(row: number): ShRowElement {
         const index = this._scrollRow + row
-        while (index >= this.$screen.children.length)
-            this.$screen.append(ShRowElement.create(this))
+        shlib.assert(row >= 0 && row < this._maxRows && index < this.$screen.children.length)
 
         return this.$screen.children[index] as ShRowElement
+    }
+
+    private _insertRowAt(row: number): ShRowElement {
+        const index = this._scrollRow + row
+        shlib.assert(row >= 0 && row <= this._maxRows && index <= this.$screen.children.length)
+
+        if (row === this._maxRows) {
+            this._vscroll(1)
+            row--
+        }
+
+        if (index < this.$screen.children.length)
+            return this.$screen.children[index].insertAdjacentElement('beforebegin', ShRowElement.create(this)) as ShRowElement
+        else {
+            this.$screen.append(ShRowElement.create(this))
+            return this.$screen.lastElementChild as ShRowElement
+        }
     }
 
     private _updateLayout() {
@@ -366,32 +404,46 @@ export class ShTerm {
         this._caretMove()
     }
 
+    /**
+     * 移动光标到屏幕上的指定位置。
+     * 
+     * @param row 光标在屏幕上的行号，从 0 开始。
+     * @param col 光标在屏幕上的列号，从 0 开始。
+     */
     private _caretMove(row?: number, col?: number) {
         if (row === undefined) {
             row = this._caretRow
             col = this._caretColumn
         } else {
-            shlib.assert(col !== undefined)
+            shlib.assert(col).hasValue()
+            col = col!
         }
 
         if (row < 0)
             row = 0
         if (row >= this._maxRows)
             row = this._maxRows - 1
-        if (col! < 0)
+        if (this._scrollRow + row >= this.$screen.children.length)
+            row = this.$screen.children.length - 1 - this._scrollRow
+
+        const $row = this._getRowAt(row)
+
+        if (col < 0)
             col = 0
-        if (col! >= this._maxColumns)
+        if (col >= this._maxColumns)
             col = this._maxColumns - 1
+        if (col > $row.countColumns())
+            col = $row.countColumns()
 
         const paddingTop = (this.$screen.clientHeight - this._rowHeight * this._maxRows) / 2
         const paddingLeft = (this.$screen.clientWidth - this._columnWidth * this._maxColumns) / 2
         this.$caret.updateCssStyle({
-            left: paddingLeft + col! * this._columnWidth + 'px',
+            left: paddingLeft + col * this._columnWidth + 'px',
             top: paddingTop + row! * this._rowHeight + 'px',
         })
 
-        this._caretRow = row!
-        this._caretColumn = col!
+        this._caretRow = row
+        this._caretColumn = col
     }
 
     private _caretPauseBlink() {
@@ -400,5 +452,22 @@ export class ShTerm {
 
         this.$caret.style.animation = 'none'
         this._caretPauseTimerId = window.setTimeout(() => this.$caret.style.animation = '', 100)
+    }
+
+    private _vscroll(deltaRow: number): number {
+        if (deltaRow === 0)
+            return 0
+        
+        if (this._scrollRow + deltaRow < 0)
+            deltaRow = -this._scrollRow
+
+        if (this._scrollRow + deltaRow >= this.$screen.children.length)
+            deltaRow = this.$screen.children.length - 1 - this._scrollRow
+
+        this._scrollRow += deltaRow
+        this.$screen.scrollBy(0, deltaRow * this._rowHeight)
+        console.log(this._scrollRow)
+        
+        return deltaRow
     }
 }

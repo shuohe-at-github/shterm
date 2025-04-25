@@ -133,6 +133,45 @@ export class ShRowElement extends HTMLElement {
         return $sp
     }
 
+    public extractSpans(startCol: number, endCol?: number): ShTextSpan[] | null {
+        shlib.assert(this._$term).hasValue()
+        shlib.assert(0 <= startCol && (endCol === undefined || startCol <= endCol))
+
+        const ncols = this.countColumns()
+        endCol = endCol ?? ncols
+
+        if (startCol >= ncols)
+            return null
+
+        const { $span: $span1, charIndex: charIndex1 } = this._columnToCharIndex(startCol)
+        const { $span: $span2, charIndex: charIndex2 } = this._columnToCharIndex(endCol)
+
+        const result = [] as ShTextSpan[]
+        if (Math.floor(charIndex1) < charIndex1) {
+            result.push(ShTextSpan.create(' ', $span1!.textStyle, this._$term!.options))
+        }
+        if (Math.ceil(charIndex1) < $span1!.textContent!.length) {
+            result.push(ShTextSpan.create($span1!.textContent!.substring(Math.ceil(charIndex1)), $span1!.textStyle, this._$term!.options))
+        }
+
+        let $sp = $span1!.nextElementSibling as ShSpanElement | null
+        while ($sp !== $span2) {
+            result.push($sp!.toTextSpan())
+            $sp = $sp!.nextElementSibling as ShSpanElement | null
+        }
+
+        if ($span2) {
+            if (0 < Math.floor(charIndex2)) {
+                result.push(ShTextSpan.create($span2!.textContent!.substring(0, Math.floor(charIndex2)), $span2!.textStyle, this._$term!.options))
+            }
+            if (charIndex2 < Math.ceil(charIndex2)) {
+                result.push(ShTextSpan.create(' ', $span2!.textStyle, this._$term!.options))
+            }
+        }
+
+        return result
+    }
+
     public appendSpan(span: ShTextSpan) {
         shlib.assert(this._$term).hasValue()
         shlib.assert(span.charWidth > 0)
